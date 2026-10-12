@@ -1,0 +1,50 @@
+{
+  "requestId": "req_8f2a91",
+  "generatedAt": "2026-10-11T09:30:00Z",
+  "agent": {
+    "id": "005xx0000012AbC",
+    "name": "Sergio Vasquez",
+    "email": "sergio.vasquez@example.com",
+    "avatarUrl": "https://cdn.example.com/avatars/sergio.png",
+    "status": "On shift",
+    "role": "Tier 2 Support"
+  },
+  "queue": {
+    "open": 18,
+    "pending": 7,
+    "avgWaitSeconds": 214,
+    "slaBreaches": 2,
+    "oldestWaitingMinutes": 47
+  },
+  "today": {
+    "resolved": 23,
+    "reopened": 1,
+    "csat": 4.6,
+    "firstResponseMinutes": 3.8,
+    "resolutionRatePct": 87.5
+  },
+  "cases": [
+    {"id": "C-10482", "subject": "Refund not processed after cancellation", "priority": "High", "status": "Escalated", "channel": "Email", "customer": {"name": "Maria Lopez", "tier": "Gold"}, "openedAt": "2026-10-10T14:05:00Z", "ageHours": 19.4},
+    {"id": "C-10490", "subject": "Cannot reset password via SMS", "priority": "Medium", "status": "In Progress", "channel": "Chat", "customer": {"name": "Daniel Kim", "tier": "Standard"}, "openedAt": "2026-10-11T07:40:00Z", "ageHours": 1.8},
+    {"id": "C-10475", "subject": "Invoice shows duplicate charge", "priority": "High", "status": "In Progress", "channel": "Phone", "customer": {"name": "Aisha Khan", "tier": "Gold"}, "openedAt": "2026-10-09T16:20:00Z", "ageHours": 41.2},
+    {"id": "C-10493", "subject": "Feature request: export to CSV", "priority": "Low", "status": "New", "channel": "Email", "customer": {"name": "Tom Becker", "tier": "Standard"}, "openedAt": "2026-10-11T08:55:00Z", "ageHours": 0.6},
+    {"id": "C-10468", "subject": "Service outage in EU region", "priority": "High", "status": "Escalated", "channel": "Phone", "customer": {"name": "Lena Fischer", "tier": "Platinum"}, "openedAt": "2026-10-09T09:10:00Z", "ageHours": 48.3},
+    {"id": "C-10488", "subject": "Update billing address", "priority": "Low", "status": "Waiting on Customer", "channel": "Chat", "customer": {"name": "Raj Patel", "tier": "Standard"}, "openedAt": "2026-10-10T18:30:00Z", "ageHours": 14.9},
+    {"id": "C-10491", "subject": "App crashes on login (iOS 19)", "priority": "Medium", "status": "New", "channel": "Chat", "customer": {"name": "Sofia Rossi", "tier": "Silver"}, "openedAt": "2026-10-11T08:10:00Z", "ageHours": 1.4},
+    {"id": "C-10479", "subject": "Request for SSO configuration help", "priority": "Medium", "status": "Waiting on Customer", "channel": "Email", "customer": {"name": "Chen Wei", "tier": "Platinum"}, "openedAt": "2026-10-10T10:00:00Z", "ageHours": 23.5}
+  ],
+  "recentActivity": [
+    {"at": "2026-10-11T09:22:00Z", "type": "Note", "caseId": "C-10482", "summary": "Called customer, refund approved by finance"},
+    {"at": "2026-10-11T09:05:00Z", "type": "Status change", "caseId": "C-10468", "summary": "Escalated to infrastructure on-call"},
+    {"at": "2026-10-11T08:48:00Z", "type": "Email", "caseId": "C-10475", "summary": "Sent duplicate charge confirmation"},
+    {"at": "2026-10-11T08:31:00Z", "type": "Note", "caseId": "C-10490", "summary": "Requested device model from customer"},
+    {"at": "2026-10-11T08:12:00Z", "type": "Status change", "caseId": "C-10493", "summary": "Created from web form"}
+  ],
+  "team": [
+    {"name": "Priya Nair", "status": "Available", "openCases": 5, "csatWeek": 4.8},
+    {"name": "Marcus Webb", "status": "On call", "openCases": 8, "csatWeek": 4.4},
+    {"name": "Elena Petrova", "status": "Away", "openCases": 3, "csatWeek": 4.7},
+    {"name": "Sergio Vasquez", "status": "Available", "openCases": 6, "csatWeek": 4.6}
+  ],
+  "internal": {"shardId": "us-east-2b", "cacheTtlSeconds": 30, "debug": false}
+}

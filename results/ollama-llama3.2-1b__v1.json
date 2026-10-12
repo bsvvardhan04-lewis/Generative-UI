@@ -1,0 +1,472 @@
+{
+  "backend": "ollama:llama3.2:1b",
+  "prompt_version": "v1",
+  "date": "2026-10-12T03:23:16+00:00",
+  "rows": [
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 2,
+      "seconds": 27.25,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "How many cases are in the queue and what's the average wait?",
+      "plan": {
+        "intent": "How many cases are in the queue and what's the average wait?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Cases in queue",
+            "value": "/queue/open"
+          },
+          {
+            "type": "metric",
+            "label": "Average wait",
+            "value": "/queue/avgWaitSeconds"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 10.07,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Show me the high priority cases",
+      "plan": {
+        "intent": "Show high priority cases",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "High priority cases",
+            "value": "/queue/pending",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "High priority cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status",
+              "channel",
+              "customer.name"
+            ],
+            "filter": {
+              "field": "priority",
+              "equals": "High"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 6.23,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What's my CSAT today?",
+      "plan": {
+        "intent": "What's my CSAT today?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "CSAT",
+            "value": "/today/csat",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": false,
+      "fallback": true,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 3,
+      "seconds": 103.8,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Who is on the team and how many open cases does each person have?",
+      "plan": {
+        "intent": "fallback: default overview",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Pending",
+            "value": "/queue/pending",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Avg Wait Seconds",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        [
+          "nodes[2]: duplicate of an earlier node",
+          "nodes[3]: duplicate of an earlier node",
+          "nodes[4]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node",
+          "nodes[6]: duplicate of an earlier node",
+          "nodes[7]: duplicate of an earlier node"
+        ],
+        [
+          "nodes[2]: duplicate of an earlier node",
+          "nodes[3]: duplicate of an earlier node",
+          "nodes[4]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node",
+          "nodes[6]: duplicate of an earlier node",
+          "nodes[7]: duplicate of an earlier node"
+        ],
+        [
+          "nodes[2]: duplicate of an earlier node",
+          "nodes[3]: duplicate of an earlier node",
+          "nodes[4]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node",
+          "nodes[6]: duplicate of an earlier node",
+          "nodes[7]: duplicate of an earlier node"
+        ]
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 6.5,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Any SLA breaches?",
+      "plan": {
+        "intent": "Any SLA breaches?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "SLA Breaches",
+            "value": "/queue/slaBreaches"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 12.15,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Show escalated cases as a table with customer name and priority",
+      "plan": {
+        "intent": "Show escalated cases as a table with customer name and priority",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Escalated cases",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          },
+          {
+            "type": "table",
+            "source": "/cases",
+            "label": "Escalated cases",
+            "fields": [
+              "id",
+              "customer.name"
+            ],
+            "sort_by": "priority",
+            "sort_dir": "asc",
+            "limit": 10
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": false,
+      "fallback": true,
+      "recall": 0.0,
+      "precision": 0.3333333333333333,
+      "nodes": 3,
+      "seconds": 88.9,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Summarize my day",
+      "plan": {
+        "intent": "fallback: default overview",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Pending",
+            "value": "/queue/pending",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Avg Wait Seconds",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        [
+          "nodes[4]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node",
+          "nodes[6]: duplicate of an earlier node"
+        ],
+        [
+          "nodes[4]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node",
+          "nodes[6]: duplicate of an earlier node"
+        ],
+        [
+          "nodes[4]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node",
+          "nodes[6]: duplicate of an earlier node",
+          "nodes[7]: duplicate of an earlier node"
+        ]
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 2,
+      "seconds": 8.48,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "What is my current status?",
+      "plan": {
+        "intent": "My current status",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Current status",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          },
+          {
+            "type": "text",
+            "label": "Status",
+            "value": "/internal/shardId"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": false,
+      "fallback": true,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 3,
+      "seconds": 98.42,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Latest 3 activity updates",
+      "plan": {
+        "intent": "fallback: default overview",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Pending",
+            "value": "/queue/pending",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Avg Wait Seconds",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        [
+          "nodes[3]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node"
+        ],
+        [
+          "nodes[3]: duplicate of an earlier node",
+          "nodes[5]: duplicate of an earlier node"
+        ],
+        [
+          "nodes[3]: duplicate of an earlier node"
+        ]
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 3,
+      "seconds": 26.05,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Show the 3 oldest cases",
+      "plan": {
+        "intent": "Show oldest cases",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Oldest cases",
+            "value": "/queue/oldestWaitingMinutes",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "Oldest cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status",
+              "channel",
+              "customer.name"
+            ],
+            "filter": {
+              "field": "priority",
+              "equals": "Low"
+            }
+          },
+          {
+            "type": "table",
+            "source": "/cases",
+            "label": "Oldest cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status",
+              "channel",
+              "customer.name"
+            ],
+            "sort_by": "id",
+            "sort_dir": "desc"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 13.18,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Which Platinum customers do we have open cases for?",
+      "plan": {
+        "intent": "Platinum customers open cases",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open cases",
+            "value": "/queue/open"
+          },
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "Platinum customers",
+            "fields": [
+              "id",
+              "customer.tier"
+            ],
+            "filter": {
+              "field": "status",
+              "equals": "New"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 7.78,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "How long until first response on average?",
+      "plan": {
+        "intent": "How long until first response on average?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Average response time",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    }
+  ]
+}

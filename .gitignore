@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.tmp
+.venv/
+.env
+
+# Plan cache written by the server at runtime (one machine's seen prompts; not source)
+cache/

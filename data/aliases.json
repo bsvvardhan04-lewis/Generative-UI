@@ -1,0 +1,14 @@
+{
+  "customer satisfaction": "csat",
+  "satisfaction": "csat",
+  "tickets": "cases",
+  "ticket": "case",
+  "people": "team",
+  "teammates": "team",
+  "staff": "team",
+  "agents": "team",
+  "service level breaches": "sla breaches",
+  "sla violations": "sla breaches",
+  "activity feed": "activity",
+  "events": "activity"
+}

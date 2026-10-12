@@ -1,0 +1,391 @@
+{
+  "backend": "ollama:llama3.2:3b",
+  "prompt_version": "v1",
+  "date": "2026-10-12T03:43:22+00:00",
+  "rows": [
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.6666666666666666,
+      "nodes": 3,
+      "seconds": 53.73,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "How many cases are in the queue and what's the average wait?",
+      "plan": {
+        "intent": "User wants open ticket count and urgent tickets",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open tickets",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "Average wait",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "Cases in queue",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status"
+            ],
+            "filter": {
+              "field": "status",
+              "equals": "New"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 12.08,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Show me the high priority cases",
+      "plan": {
+        "intent": "User wants high priority cases",
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "High Priority Cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status"
+            ],
+            "filter": {
+              "field": "priority",
+              "equals": "High"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 8.78,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What's my CSAT today?",
+      "plan": {
+        "intent": "User wants CSAT today",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "CSAT today",
+            "value": "/today/csat",
+            "format": "number"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 12.45,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Who is on the team and how many open cases does each person have?",
+      "plan": {
+        "intent": "User wants team members and open cases",
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/team",
+            "label": "Team members",
+            "fields": [
+              "name",
+              "status",
+              "openCases"
+            ],
+            "sort_by": "name",
+            "sort_dir": "asc",
+            "limit": 4
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 8.87,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Any SLA breaches?",
+      "plan": {
+        "intent": "User wants SLA breaches",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "SLA breaches",
+            "value": "/queue/slaBreaches",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 16.31,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Show escalated cases as a table with customer name and priority",
+      "plan": {
+        "intent": "User wants escalated cases as a table with customer name and priority",
+        "nodes": [
+          {
+            "type": "table",
+            "source": "/cases",
+            "label": "Escalated Cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "customer.name"
+            ],
+            "filter": {
+              "field": "status",
+              "equals": "Escalated"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 2,
+      "seconds": 15.35,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Summarize my day",
+      "plan": {
+        "intent": "Summarize my day",
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "label": "Recent Activity",
+            "fields": [
+              "at",
+              "type",
+              "caseId"
+            ],
+            "limit": 5
+          },
+          {
+            "type": "metric",
+            "label": "Open Cases",
+            "value": "/internal/cacheTtlSeconds",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 8.02,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What is my current status?",
+      "plan": {
+        "intent": "User wants current status",
+        "nodes": [
+          {
+            "type": "status",
+            "label": "Agent status",
+            "value": "/agent/status"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 95.78,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Latest 3 activity updates",
+      "plan": {
+        "intent": "User wants latest 3 activity updates",
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "label": "Recent Activity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ],
+            "limit": 3,
+            "filter": {
+              "field": "type",
+              "equals": "Email"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 14.4,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Show the 3 oldest cases",
+      "plan": {
+        "intent": "User wants 3 oldest cases",
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "Cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status",
+              "channel",
+              "customer.name"
+            ],
+            "filter": {
+              "field": "status",
+              "equals": "New"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 13.49,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Which Platinum customers do we have open cases for?",
+      "plan": {
+        "intent": "Get Platinum customers with open cases",
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/cases",
+            "label": "Platinum customers with open cases",
+            "fields": [
+              "customer.tier",
+              "status"
+            ],
+            "filter": {
+              "field": "customer.tier",
+              "equals": "Platinum"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 9.99,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "How long until first response on average?",
+      "plan": {
+        "intent": "User wants average first response time",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Average first response time",
+            "value": "/today/firstResponseMinutes",
+            "format": "number"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    }
+  ]
+}

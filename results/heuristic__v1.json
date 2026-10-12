@@ -1,0 +1,397 @@
+{
+  "backend": "heuristic",
+  "prompt_version": "v1",
+  "date": "2026-10-12T03:23:16+00:00",
+  "rows": [
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.5,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "How many cases are in the queue and what's the average wait?",
+      "plan": {
+        "intent": "heuristic match for: How many cases are in the queue and what's the average wait?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Avg wait seconds",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "label": "Cases",
+            "source": "/cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority"
+            ]
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Show me the high priority cases",
+      "plan": {
+        "intent": "heuristic match for: Show me the high priority cases",
+        "nodes": [
+          {
+            "type": "list",
+            "label": "Cases",
+            "source": "/cases",
+            "fields": [
+              "priority"
+            ],
+            "filter": {
+              "field": "priority",
+              "equals": "High"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What's my CSAT today?",
+      "plan": {
+        "intent": "heuristic match for: What's my CSAT today?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Csat",
+            "value": "/today/csat",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "nodes": 3,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Who is on the team and how many open cases does each person have?",
+      "plan": {
+        "intent": "heuristic match for: Who is on the team and how many open cases does each person have?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "label": "Cases",
+            "source": "/cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority"
+            ]
+          },
+          {
+            "type": "list",
+            "label": "Team",
+            "source": "/team",
+            "fields": [
+              "openCases"
+            ]
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Any SLA breaches?",
+      "plan": {
+        "intent": "heuristic match for: Any SLA breaches?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Sla breaches",
+            "value": "/queue/slaBreaches",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Show escalated cases as a table with customer name and priority",
+      "plan": {
+        "intent": "heuristic match for: Show escalated cases as a table with customer name and priority",
+        "nodes": [
+          {
+            "type": "status",
+            "label": "Name",
+            "value": "/agent/name"
+          },
+          {
+            "type": "table",
+            "label": "Cases",
+            "source": "/cases",
+            "fields": [
+              "priority",
+              "customer.name",
+              "customer.tier"
+            ],
+            "filter": {
+              "field": "status",
+              "equals": "Escalated"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.3333333333333333,
+      "nodes": 3,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Summarize my day",
+      "plan": {
+        "intent": "heuristic match for: Summarize my day",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "open",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "pending",
+            "value": "/queue/pending",
+            "format": "auto"
+          },
+          {
+            "type": "metric",
+            "label": "avgWaitSeconds",
+            "value": "/queue/avgWaitSeconds",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What is my current status?",
+      "plan": {
+        "intent": "heuristic match for: What is my current status?",
+        "nodes": [
+          {
+            "type": "status",
+            "label": "Status",
+            "value": "/agent/status"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Latest 3 activity updates",
+      "plan": {
+        "intent": "heuristic match for: Latest 3 activity updates",
+        "nodes": [
+          {
+            "type": "list",
+            "label": "Recent activity",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId"
+            ],
+            "limit": 3,
+            "sort_by": "at",
+            "sort_dir": "desc"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 0.0,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Show the 3 oldest cases",
+      "plan": {
+        "intent": "heuristic match for: Show the 3 oldest cases",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Oldest waiting minutes",
+            "value": "/queue/oldestWaitingMinutes",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "label": "Cases",
+            "source": "/cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority"
+            ],
+            "sort_by": "ageHours",
+            "sort_dir": "desc"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.5,
+      "nodes": 2,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Which Platinum customers do we have open cases for?",
+      "plan": {
+        "intent": "heuristic match for: Which Platinum customers do we have open cases for?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "Open",
+            "value": "/queue/open",
+            "format": "auto"
+          },
+          {
+            "type": "list",
+            "label": "Cases",
+            "source": "/cases",
+            "fields": [
+              "customer.name",
+              "customer.tier"
+            ],
+            "filter": {
+              "field": "customer.tier",
+              "equals": "Platinum"
+            }
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "How long until first response on average?",
+      "plan": {
+        "intent": "heuristic match for: How long until first response on average?",
+        "nodes": [
+          {
+            "type": "metric",
+            "label": "First response minutes",
+            "value": "/today/firstResponseMinutes",
+            "format": "auto"
+          }
+        ]
+      },
+      "errors": [
+        null
+      ]
+    }
+  ]
+}

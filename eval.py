@@ -7,11 +7,14 @@ from __future__ import annotations
 import json
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from cui import run
-from cui.pipeline import PROMPT_VERSION
+from cui.catalog import build_catalog
+from cui.pipeline import PROMPT_VERSION, prefix_messages
+from cui.selector import SELECT_VERSION
 from run import make_backend
 
 HERE = Path(__file__).parent
@@ -82,11 +85,15 @@ def percentile(values: list[float], q: float) -> float:
 
 
 def main() -> None:
-    """python eval.py [--set dev|heldout|all] SPEC...   SPEC = heuristic | ollama:MODEL | fast+ollama:MODEL
-    `fast+` adds the router (and data/aliases.json) in front of the model, i.e. the production path."""
+    """python eval.py [--set dev|heldout|all] SPEC...   SPEC = [fast+][sel+]heuristic|ollama:MODEL
+    `fast+` adds the router (and data/aliases.json) in front of the model, i.e. the production path.
+    `sel+` uses select mode: the model only picks catalog items (see cui/selector.py)."""
     sys.stdout.reconfigure(encoding="utf-8")
     args = sys.argv[1:]
     which = "dev"
+    warm = "--warm" in args  # pre-load model + prompt prefix first, as the server does when a model is selected
+    if warm:
+        args.remove("--warm")
     if "--set" in args:
         i = args.index("--set")
         which = args[i + 1]
@@ -96,16 +103,22 @@ def main() -> None:
     aliases = json.loads((HERE / "data" / "aliases.json").read_text(encoding="utf-8"))
     dev = json.loads((HERE / "data" / "eval_cases.json").read_text(encoding="utf-8"))
     held = json.loads((HERE / "data" / "heldout_cases.json").read_text(encoding="utf-8"))
-    cases = {"dev": dev, "heldout": held, "all": dev + held}[which]
+    held2 = json.loads((HERE / "data" / "heldout2_cases.json").read_text(encoding="utf-8"))
+    cases = {"dev": dev, "heldout": held, "heldout2": held2, "all": dev + held}[which]
     summary = []
     RESULTS.mkdir(exist_ok=True)
     for spec in specs:
-        fast = spec.startswith("fast+")
-        kind, _, model = spec.removeprefix("fast+").partition(":")
+        *flags, base = spec.split("+")  # e.g. fast+sel+ollama:llama3.2:3b
+        fast, mode = "fast" in flags, ("select" if "sel" in flags else "plan")
+        kind, _, model = base.partition(":")
         backend = make_backend(kind, model or "llama3.2:3b", None)
+        if warm and hasattr(backend, "warm"):
+            t = time.perf_counter()
+            backend.warm(prefix_messages(build_catalog(data), mode))
+            print(f"  warm-up {spec}: {time.perf_counter() - t:.1f}s (not counted below)", flush=True)
         rows = []
         for c in cases:
-            res = run(c["prompt"], data, backend, fast_path=fast, aliases=aliases if fast else None)
+            res = run(c["prompt"], data, backend, fast_path=fast, aliases=aliases if (fast or mode == "select") else None, mode=mode)
             sc = score(c, res)
             sc["prompt"] = c["prompt"]
             sc["plan"] = res.plan
@@ -124,10 +137,8 @@ def main() -> None:
             "fast_wrong": sum(r["source"] == "fast_path" and not r["pass"] for r in rows),
             "p50": percentile(secs, 0.5), "p90": percentile(secs, 0.9), "max": max(secs), "mean": sum(secs) / len(secs),
         })
-        if which == "dev":
-            save_run(spec, rows)
-        else:
-            save_run(f"{spec}@{which}", rows)
+        version = SELECT_VERSION if mode == "select" else PROMPT_VERSION
+        save_run(spec if which == "dev" else f"{spec}@{which}", rows, version)
 
     print(f"\n{'backend':30} {'passed':>8} {'no-model':>9} {'wrong w/o model':>16} {'p50':>7} {'p90':>7} {'max':>7} {'mean':>7}   (set: {which}, vague prompts excluded from 'passed')")
     for s in summary:

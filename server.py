@@ -28,6 +28,9 @@ from cui.pipeline import PROMPT_VERSION, PlanCache, prefix_messages
 
 HERE = Path(__file__).parent
 PLAN_CACHE = PlanCache(path=HERE / "cache" / "plans.json")
+# "select": the model picks catalog paths (~12 tokens) instead of writing a plan (32-65 tokens). On the fresh
+# held-out set (data/heldout2_cases.json) it matched or beat "plan" accuracy at ~40% lower median latency.
+DEFAULT_MODE = "select"
 
 
 def load_aliases() -> dict[str, str]:
@@ -82,7 +85,7 @@ def list_models(base_url: str) -> dict:
         return {"reachable": False, "url": base_url, "version": None, "models": [], "error": str(getattr(e, "reason", e))}
 
 
-NOT_DATASETS = {"eval_cases", "heldout_cases", "aliases"}  # configuration and test files that live in data/
+NOT_DATASETS = {"eval_cases", "heldout_cases", "heldout2_cases", "aliases"}  # configuration and test files that live in data/
 
 
 def list_datasets() -> list[dict]:
@@ -134,7 +137,15 @@ def parse_run_request(body: dict):
     retries = body.get("retries", 2)
     if not isinstance(retries, int) or not 0 <= retries <= 3:
         raise ApiError(400, "Repair attempts must be between 0 and 3")
-    return prompt, data, make_backend(body), retries
+    return prompt, data, make_backend(body), retries, model_mode(body)
+
+
+def model_mode(body: dict) -> str:
+    """How the model is asked: "select" (picks catalog items; few tokens, fast) or "plan" (writes the whole plan)."""
+    mode = body.get("mode", DEFAULT_MODE)
+    if mode not in ("select", "plan"):
+        raise ApiError(400, 'mode must be "select" or "plan"')
+    return mode
 
 
 def run_payload(res, backend) -> dict:
@@ -170,7 +181,7 @@ def warm_model(body: dict) -> dict:
     messages = None
     data = body.get("data")
     if isinstance(data, dict) and data:
-        messages = prefix_messages(build_catalog(data))
+        messages = prefix_messages(build_catalog(data), model_mode(body))
     try:
         info = backend.warm(messages)
     except RuntimeError as e:
@@ -294,7 +305,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError(400, "Request body must be a JSON object")
             if path == "/api/warm":
                 return self._send_json(warm_model(body))
-            prompt, data, backend, retries = parse_run_request(body)
+            prompt, data, backend, retries, mode = parse_run_request(body)
         except ApiError as e:
             return self._fail(e)
 
@@ -314,7 +325,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             emit("start", {"backend": backend.name, "retries": retries})
             use_fast = body.get("fastPath", True) is not False and backend.name != "heuristic-baseline"
-            res = run(prompt, data, backend, retries, on_event=emit, cache=PLAN_CACHE, fast_path=use_fast, aliases=load_aliases())
+            if backend.name == "heuristic-baseline":
+                mode = "plan"  # the keyword baseline writes plans, it cannot "pick"
+            res = run(prompt, data, backend, retries, on_event=emit, cache=PLAN_CACHE, fast_path=use_fast,
+                      aliases=load_aliases(), mode=mode)
             emit("result", run_payload(res, backend))
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass  # client cancelled

@@ -1,0 +1,523 @@
+{
+  "backend": "fast+sel+ollama:llama3.2:3b@heldout2",
+  "prompt_version": "s1",
+  "date": "2026-10-12T15:48:04+00:00",
+  "rows": [
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0046,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Give me the count of open tickets",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/queue/open"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "fast_path",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 6.3713,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What percentage of cases got resolved?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/today/resolutionRatePct"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 3.2361,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "How satisfied are customers today?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/today/firstResponseMinutes"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0018,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Who on my team is away?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/team",
+            "filter": {
+              "field": "status",
+              "equals": "Away"
+            },
+            "fields": [
+              "name",
+              "status",
+              "openCases",
+              "csatWeek"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "fast_path",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 3.105,
+      "unexpected_filter": false,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Which cases are still new?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0029,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "List chat cases",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/cases",
+            "filter": {
+              "field": "channel",
+              "equals": "Chat"
+            },
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "fast_path",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 3.0978,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What's the longest wait right now?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/queue/oldestWaitingMinutes"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 3.1784,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "How quickly do I respond to customers?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/today/resolutionRatePct"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "nodes": 3,
+      "seconds": 3.8929,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Show everyone on the team with their open case counts",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status"
+            ]
+          },
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ]
+          },
+          {
+            "type": "list",
+            "source": "/team",
+            "fields": [
+              "openCases"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 3.0234,
+      "unexpected_filter": false,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "Which Silver tier customers have cases?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 3.0149,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "What did I do most recently?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 2.9615,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Am I on shift?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "text",
+            "value": "/agent/status"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 3.0005,
+      "unexpected_filter": false,
+      "constraints_ok": false,
+      "pass": false,
+      "prompt": "How many escalations are there?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "text",
+            "value": "/internal/shardId"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 1,
+      "seconds": 3.1231,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Breakdown of my team's workload",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 0.0016,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Show subject and status for every case",
+      "plan": {
+        "nodes": [
+          {
+            "type": "list",
+            "source": "/cases",
+            "fields": [
+              "subject",
+              "status"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "fast_path",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 0.0,
+      "precision": 0.0,
+      "nodes": 3,
+      "seconds": 3.9411,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": false,
+      "prompt": "Customer satisfaction for the week across the team",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/today/firstResponseMinutes"
+          },
+          {
+            "type": "list",
+            "source": "/cases",
+            "fields": [
+              "id",
+              "subject",
+              "priority",
+              "status"
+            ]
+          },
+          {
+            "type": "list",
+            "source": "/recentActivity",
+            "fields": [
+              "at",
+              "type",
+              "caseId",
+              "summary"
+            ]
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    },
+    {
+      "first_try_valid": true,
+      "fallback": false,
+      "recall": 1.0,
+      "precision": 1.0,
+      "nodes": 1,
+      "seconds": 3.0534,
+      "unexpected_filter": false,
+      "constraints_ok": true,
+      "pass": true,
+      "prompt": "Is anyone waiting too long?",
+      "plan": {
+        "nodes": [
+          {
+            "type": "metric",
+            "value": "/queue/oldestWaitingMinutes"
+          }
+        ]
+      },
+      "vague": false,
+      "source": "model",
+      "errors": [
+        null
+      ]
+    }
+  ]
+}

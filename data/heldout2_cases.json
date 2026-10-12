@@ -1,0 +1,19 @@
+[
+  {"prompt": "Give me the count of open tickets", "must": ["/queue/open"], "may": []},
+  {"prompt": "What percentage of cases got resolved?", "must": ["/today/resolutionRatePct"], "may": []},
+  {"prompt": "How satisfied are customers today?", "must": ["/today/csat"], "may": []},
+  {"prompt": "Who on my team is away?", "must": ["/team"], "may": [], "filter": {"field": "status", "equals": "Away"}},
+  {"prompt": "Which cases are still new?", "must": ["/cases"], "may": [], "filter": {"field": "status", "equals": "New"}},
+  {"prompt": "List chat cases", "must": ["/cases"], "may": [], "filter": {"field": "channel", "equals": "Chat"}},
+  {"prompt": "What's the longest wait right now?", "must": ["/queue/oldestWaitingMinutes"], "may": []},
+  {"prompt": "How quickly do I respond to customers?", "must": ["/today/firstResponseMinutes"], "may": []},
+  {"prompt": "Show everyone on the team with their open case counts", "must": ["/team"], "may": [], "fields_include": ["openCases"]},
+  {"prompt": "Which Silver tier customers have cases?", "must": ["/cases"], "may": [], "filter": {"field": "customer.tier", "equals": "Silver"}},
+  {"prompt": "What did I do most recently?", "must": ["/recentActivity"], "may": []},
+  {"prompt": "Am I on shift?", "must": ["/agent/status"], "may": []},
+  {"prompt": "How many escalations are there?", "must": ["/cases"], "may": [], "filter": {"field": "status", "equals": "Escalated"}},
+  {"prompt": "Breakdown of my team's workload", "must": ["/team"], "may": []},
+  {"prompt": "Show subject and status for every case", "must": ["/cases"], "may": [], "fields_include": ["subject", "status"]},
+  {"prompt": "Customer satisfaction for the week across the team", "must": ["/team"], "may": []},
+  {"prompt": "Is anyone waiting too long?", "must": ["/queue/oldestWaitingMinutes"], "may": ["/queue/avgWaitSeconds", "/queue/slaBreaches"]}
+]

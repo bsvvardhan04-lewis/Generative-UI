@@ -93,6 +93,7 @@ class ServerTests(unittest.TestCase):
             ({"prompt": "x", "backend": "heuristic", "retries": 9}, "between 0 and 3"),
             ({"prompt": "x", "backend": "ollama"}, "model"),
             ({"prompt": "x", "backend": "nope"}, "Unknown backend"),
+            ({"prompt": "x", "backend": "heuristic", "mode": "guess"}, "mode must be"),
         ]
         for body, expect in cases:
             status, _, raw = self.request("POST", "/api/run", body)

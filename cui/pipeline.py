@@ -15,6 +15,7 @@ from .catalog import Catalog, build_catalog, render_catalog
 from .compiler import compile_plan, default_plan
 from .router import STOP, apply_aliases, route, stem
 from .schema import MAX_NODES, build_plan_schema
+from .selector import SELECT_VERSION, picks_to_plan, select_messages, select_options, select_schema
 from .validate import validate_plan
 
 # Bump when SYSTEM changes so stored eval results stay comparable. v1 had a filter + limit in the example.
@@ -59,8 +60,10 @@ def build_messages(prompt: str, cat: Catalog) -> list[dict]:
     return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
 
 
-def prefix_messages(cat: Catalog) -> list[dict]:
+def prefix_messages(cat: Catalog, mode: str = "plan") -> list[dict]:
     """The shared part of every request for this data, used to pre-fill the prompt cache."""
+    if mode == "select":
+        return select_messages("", cat, select_options(cat))
     return build_messages("", cat)
 
 
@@ -95,8 +98,8 @@ class PlanCache:
             self._load()
 
     @staticmethod
-    def key(backend_name: str, cat: Catalog, prompt: str, aliases: dict[str, str] | None = None) -> tuple:
-        return (backend_name, PROMPT_VERSION, structure_fingerprint(cat), normalize_prompt(prompt, aliases))
+    def key(backend_name: str, cat: Catalog, prompt: str, aliases: dict[str, str] | None = None, version: str = PROMPT_VERSION) -> tuple:
+        return (backend_name, version, structure_fingerprint(cat), normalize_prompt(prompt, aliases))
 
     def get(self, key):
         with self._lock:
@@ -139,8 +142,12 @@ class PlanCache:
 
 
 def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: PlanCache | None = None,
-        fast_path: bool = False, aliases: dict[str, str] | None = None) -> Result:
-    """Run the pipeline. `on_event(name, data)` is called as each stage starts/finishes (used by the web UI)."""
+        fast_path: bool = False, aliases: dict[str, str] | None = None, mode: str = "plan") -> Result:
+    """Run the pipeline. `on_event(name, data)` is called as each stage starts/finishes (used by the web UI).
+    mode="plan": the model writes the whole view plan. mode="select": the model only picks numbered catalog
+    items and code adds filter/sort/limit/columns (far fewer generated tokens, see selector.py)."""
+    if mode not in ("plan", "select"):
+        raise ValueError(f"unknown mode {mode!r}")
     emit = on_event or (lambda name, payload=None: None)
     t0 = time.perf_counter()
     stages: dict = {}
@@ -158,21 +165,24 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
     emit("catalog", stages["catalog"])
 
     t = time.perf_counter()
-    schema = build_plan_schema(cat)
-    stages["schema"] = {
-        "seconds": round(time.perf_counter() - t, 4),
-        "variants": len(schema["properties"]["nodes"]["items"]["anyOf"]),
-        "schema_chars": len(json.dumps(schema)),
-    }
+    if mode == "select":
+        opts = select_options(cat)
+        schema = select_schema(opts)
+        messages = select_messages(prompt, cat, opts)
+        variants, version = len(opts), SELECT_VERSION
+    else:
+        schema = build_plan_schema(cat)
+        messages = build_messages(prompt, cat)
+        variants, version = len(schema["properties"]["nodes"]["items"]["anyOf"]), PROMPT_VERSION
+    stages["schema"] = {"seconds": round(time.perf_counter() - t, 4), "variants": variants, "schema_chars": len(json.dumps(schema)), "mode": mode}
     emit("schema", stages["schema"])
 
-    messages = build_messages(prompt, cat)
     if hasattr(backend, "bind"):
         backend.bind(cat, prompt)
 
     attempts: list[dict] = []
     plan, errors = None, ["not run"]
-    cache_key = PlanCache.key(getattr(backend, "name", "model"), cat, prompt, aliases) if cache is not None else None
+    cache_key = PlanCache.key(getattr(backend, "name", "model"), cat, prompt, aliases, version) if cache is not None else None
     cached = cache.get(cache_key) if cache is not None else None
     routed = None
     if cached is not None:
@@ -205,8 +215,12 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
         emit("model_done", {"attempt": attempt, "seconds": seconds, **meta})
         t = time.perf_counter()
         try:
-            plan = json.loads(text)
-            errors = validate_plan(plan, cat)
+            out = json.loads(text)
+            if mode == "select":
+                plan, errors = picks_to_plan(out, prompt, cat, opts, aliases)
+                errors = errors or validate_plan(plan, cat)
+            else:
+                plan, errors = out, validate_plan(out, cat)
         except json.JSONDecodeError as e:
             plan, errors = None, [f"output was not valid JSON ({e.msg} at char {e.pos})"]
         attempts.append({"seconds": seconds, "errors": errors, **meta})

@@ -20,7 +20,7 @@ from .validate import validate_plan
 STOP = set("""a an the of in on at for to is are was were be been being do does did have has had i me my we our us you your
 it its this that these those there here what whats which who whom whose how when where why and or with from by any all some
 show display list give tell get see view find fetch please can could would should will now currently current as about than
-then them they their each every per just only also into over under out up down""".split())
+then them they their each every per just only also into over under out up down via through""".split())
 # Generic nouns / measure words that name nothing by themselves.
 FILLER = set("""time score value level amount long information info details data item record entry row result update one ones
 thing things""".split())
@@ -213,6 +213,10 @@ def collection_node(cat: Catalog, ptr: str, p: Parsed, used: list[bool], hits: l
             for q in pos:
                 used[q] = True
     fields = [f for _, f in sorted(mentioned)]  # columns in the order the user named them
+    if hits:  # any remaining word that names the filtered field ("customer" in "customer cases with gold tier")
+        for i, s in enumerate(stems):
+            if not used[i] and s in qualifier:
+                used[i] = True
     if not fields:
         fields = names[:DEFAULT_FIELDS]
         if node.get("sort_by") and node["sort_by"] not in fields:
@@ -319,7 +323,9 @@ def route(prompt: str, cat: Catalog, aliases: dict[str, str] | None = None) -> R
             return Route(None, "sort/limit words without a list")
         for c in picked:
             for t in c["matched"] + c["parents"]:
-                used[stems.index(t)] = True
+                for i, s in enumerate(stems):  # every occurrence, not just the first
+                    if s == t:
+                        used[i] = True
         return finish({"nodes": [scalar_node(cat, c["ptr"]) for c in picked]})
 
     # ---- one collection ---------------------------------------------------------------------

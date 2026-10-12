@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .catalog import Catalog, build_catalog, render_catalog
 from .compiler import compile_plan, default_plan
+from .rewrite import rewrite
 from .router import STOP, apply_aliases, route, stem
 from .schema import MAX_NODES, build_plan_schema
 from .selector import SELECT_VERSION, picks_to_plan, select_messages, select_options, select_schema
@@ -51,6 +52,7 @@ class Result:
     total_seconds: float = 0.0
     catalog_text: str = ""
     stages: dict = field(default_factory=dict)
+    rewrite: dict = field(default_factory=dict)  # {"text": rewritten request, "steps": [{"level","from","to"}]}
 
 
 def build_messages(prompt: str, cat: Catalog) -> list[dict]:
@@ -164,6 +166,15 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
     }
     emit("catalog", stages["catalog"])
 
+    # Query rewrite (L0 normalize, L1 spelling, L2 concepts, L3 aliases): the rewritten text drives the cache key,
+    # the router and the code that adds filters/sort/limit/columns. The model keeps the user's own wording.
+    t = time.perf_counter()
+    rw = rewrite(prompt, cat, aliases)
+    query = rw.text
+    stages["rewrite"] = {"seconds": round(time.perf_counter() - t, 4), "text": query, "steps": rw.steps}
+    if rw.changed:
+        emit("rewrite", stages["rewrite"])
+
     t = time.perf_counter()
     if mode == "select":
         opts = select_options(cat)
@@ -182,7 +193,7 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
 
     attempts: list[dict] = []
     plan, errors = None, ["not run"]
-    cache_key = PlanCache.key(getattr(backend, "name", "model"), cat, prompt, aliases, version) if cache is not None else None
+    cache_key = PlanCache.key(getattr(backend, "name", "model"), cat, query, None, version) if cache is not None else None
     cached = cache.get(cache_key) if cache is not None else None
     routed = None
     if cached is not None:
@@ -191,7 +202,7 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
         emit("cache_hit", {"backend": getattr(backend, "name", "model")})
     elif fast_path:
         t = time.perf_counter()
-        routed = route(prompt, cat, aliases)
+        routed = route(query, cat)
         took = round(time.perf_counter() - t, 4)
         if routed.plan is not None:
             plan, errors = routed.plan, []
@@ -217,7 +228,7 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
         try:
             out = json.loads(text)
             if mode == "select":
-                plan, errors = picks_to_plan(out, prompt, cat, opts, aliases)
+                plan, errors = picks_to_plan(out, query, cat, opts)
                 errors = errors or validate_plan(plan, cat)
             else:
                 plan, errors = out, validate_plan(out, cat)
@@ -245,4 +256,5 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
     return Result(
         prompt, plan, dsl, attempts, fallback, errors if fallback else [],
         len(catalog_text), round(time.perf_counter() - t0, 4), catalog_text, stages,
+        {"text": query, "steps": rw.steps},
     )

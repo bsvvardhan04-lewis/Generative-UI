@@ -383,7 +383,10 @@ function onEvent(ev) {
 
 function drawStatus() {
   const el = refs.status;
-  if (!S.running) { el.replaceChildren(...(S.summary ? [h('span', { text: S.summary })] : [])); return; }
+  if (!S.running) {
+    el.replaceChildren(...[S.summary && h('span', { text: S.summary }), S.rewriteNote && h('span', { class: 'hint', text: S.rewriteNote })].filter(Boolean));
+    return;
+  }
   const secs = Math.round((performance.now() - S.startedAt) / 1000);
   el.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), h('span', { text: `${S.statusText} ${secs}s` }));
 }
@@ -409,7 +412,7 @@ async function run() {
   else { body.backend = 'ollama'; body.model = S.model.replace(/^ollama:/, ''); }
 
   S.controller = new AbortController();
-  S.running = true; S.result = null; S.error = null; S.summary = ''; S.statusText = 'Starting…'; S.startedAt = performance.now();
+  S.running = true; S.result = null; S.error = null; S.summary = ''; S.rewriteNote = ''; S.statusText = 'Starting…'; S.startedAt = performance.now();
   S.timer = setInterval(drawStatus, 1000);
   refs.runBtn.disabled = true; refs.cancelBtn.hidden = false;
   drawStatus(); draw();
@@ -428,6 +431,10 @@ async function run() {
       : r.source === 'cache' ? `Seen before: served from the plan cache in ${fmtSecs(wall)}, no model used.`
         : r.source === 'fast_path' ? `Answered by the fast path in ${fmtSecs(wall)}, no model used.`
           : `Done in ${fmtSecs(wall)}${modelSecs ? ` (model ${fmtSecs(modelSecs)})` : ''}.`;
+    const steps = (r && r.rewrite && r.rewrite.steps) || [];
+    S.rewriteNote = steps.length
+      ? `Understood as “${r.rewrite.text}” (${[...new Set(steps.map(s => `${s.from} → ${s.to}`))].join(', ')})`
+      : '';
     drawStatus(); draw();
     if (S.result && S.rightTab === 'data') showRightTab('structure');
   }

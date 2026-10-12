@@ -4,6 +4,7 @@ Pure Python 3.11 (standard library only) plus a dependency-free web UI. Runs ful
 
 ```
 prompt + API JSON
+  -> rewrite.py    query rewrite, level by level (~1 ms): L0 normalize, L1 spelling, L2 concepts, L3 aliases
   -> pipeline.py   plan cache: a prompt seen before skips everything below (about 5-20 ms)
   -> router.py     fast path: deterministic matcher, answers clear prompts without a model (about 1-10 ms)
   -> catalog.py    introspect payload into a compact catalog (pointers, types, enums)
@@ -45,7 +46,46 @@ and lists models; it never downloads models. `POST /api/run` accepts `"mode": "s
 
 ## Latency
 
-Four code-level measures keep the language model out of the request path, or make it short:
+The idea: answer each request at the cheapest level that can answer it correctly, and make the cheap levels
+cover as many requests as possible.
+
+| level | cost | answers |
+|---|---|---|
+| query rewrite | ~1 ms, always | nothing by itself; turns wording into the data's vocabulary so the levels below match |
+| plan cache | ~5-20 ms | anything asked before, in any wording that rewrites to the same words |
+| fast-path router | ~1-10 ms | clear requests: every word explained by the data |
+| model (select mode) | ~3-5 s on this laptop | everything else |
+
+### Query rewrite (`cui/rewrite.py`)
+
+Each level only ever rewrites a word into the data's own vocabulary:
+
+* **L0 normalize**: lower case, contractions ("who's" -> "who is"), punctuation.
+* **L1 spelling**: a 6+ letter word that is not in the vocabulary -> the single closest data, alias or generic word
+  (edit distance 1, or 2 for 8+ letters; same first letter; unique best). "escalted" -> "escalated",
+  "tikets" -> "tickets", "priorty" -> "priority". Short words are never corrected ("stats" stays "stats").
+* **L2 concepts**: generic synonym groups, data-aware: "client" -> "customer" only if the data uses "customer" and
+  not "client"; "solved" -> "resolved". Nothing is invented on data that lacks the target word.
+* **L3 aliases**: `data/aliases.json` phrases.
+
+The rewritten text drives the router, the code that adds filters/sort/limit/columns, and the cache key; the model
+still sees the user's original wording. The UI shows it: *Understood as "show me escalated cases as a table with
+customer name" (escalted -> escalated, tikets -> tickets, clients -> customer, tickets -> cases)*.
+
+Router coverage, before and after query rewrite (no model involved; `python eval_router.py all [--no-rewrite]`):
+
+| set | without rewrite | with rewrite |
+|---|---|---|
+| dev (12) | 7 answered, 7 correct | 7 answered, 7 correct |
+| held-out (28) | 19 answered, 19 correct | 19 answered, 19 correct |
+| held-out 2 (17) | 6 answered, 6 correct | 6 answered, 6 correct |
+| **paraphrase (20: typos, synonyms, contractions)** | **5 answered, 5 correct** | **17 answered, 17 correct** |
+
+The paraphrase set was written before the rewrite code. Its first run surfaced four general bugs (plural filler words
+being remapped, a repeated word after an alias, synonyms applied after aliases, a filtered-field word not next to its
+value), which were fixed before the numbers above; it is therefore no longer a clean held-out set.
+
+### Measures that cut model time
 
 | measure | when it applies | latency |
 |---|---|---|
@@ -100,14 +140,14 @@ datasets will differ; the router needs the same style of precise vocabulary the 
 ## Command line
 
 ```bash
-python -m unittest discover -s tests -t .          # 88 tests, no model needed
+python -m unittest discover -s tests -t .          # 101 tests, no model needed
 python run.py "show high priority cases" --render markdown          # keyword baseline, no LLM
 python run.py "show high priority cases" --backend ollama --model llama3.1:8b --render plan
 python run.py "show escalated cases as a table" --backend ollama --model llama3.1:8b --render card
 python run.py "summarize my day" --backend ollama --model llama3.1:8b --render html --out out.html
 python eval.py heuristic ollama:llama3.2:3b ollama:llama3.1:8b     # model only, plan mode, dev cases
 python eval.py --warm --set heldout2 fast+sel+ollama:llama3.1:8b   # production path: router + select mode
-python eval_router.py all                                          # router only: coverage and accuracy
+python eval_router.py all [--no-rewrite]                           # router only: coverage and accuracy
 ```
 
 `eval.py` spec flags: `fast+` puts the router (and aliases) in front, `sel+` uses select mode; `--set` is

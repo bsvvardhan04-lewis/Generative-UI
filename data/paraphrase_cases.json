@@ -1,0 +1,22 @@
+[
+  {"prompt": "whats the avrage wait time", "must": ["/queue/avgWaitSeconds"], "may": []},
+  {"prompt": "show me escalted cases", "must": ["/cases"], "may": [], "filter": {"field": "status", "equals": "Escalated"}},
+  {"prompt": "how many open tikets", "must": ["/queue/open"], "may": []},
+  {"prompt": "show the two oldest cases", "must": ["/cases"], "may": [], "limit": 2, "sort_any": [["ageHours", "desc"], ["openedAt", "asc"]]},
+  {"prompt": "who's on call in my team", "must": ["/team"], "may": [], "filter": {"field": "status", "equals": "On call"}},
+  {"prompt": "what is my curent status", "must": ["/agent/status"], "may": []},
+  {"prompt": "show medium priorty cases", "must": ["/cases"], "may": [], "filter": {"field": "priority", "equals": "Medium"}},
+  {"prompt": "how many reopned cases today", "must": ["/today/reopened"], "may": []},
+  {"prompt": "show cases opened via email", "must": ["/cases"], "may": [], "filter": {"field": "channel", "equals": "Email"}},
+  {"prompt": "number of sla breeches", "must": ["/queue/slaBreaches"], "may": []},
+  {"prompt": "pending tickets count", "must": ["/queue/pending"], "may": []},
+  {"prompt": "show the latest three events", "must": ["/recentActivity"], "may": [], "limit": 3, "sort_any": [["at", "desc"]]},
+  {"prompt": "how is client satisfaction", "must": ["/today/csat"], "may": []},
+  {"prompt": "show clients cases with gold tier", "must": ["/cases"], "may": [], "filter": {"field": "customer.tier", "equals": "Gold"}},
+  {"prompt": "list cases by the phone channel", "must": ["/cases"], "may": [], "filter": {"field": "channel", "equals": "Phone"}},
+  {"prompt": "first responce time", "must": ["/today/firstResponseMinutes"], "may": []},
+  {"prompt": "show solved count for today", "must": ["/today/resolved"], "may": []},
+  {"prompt": "table of cases with subjct and status", "must": ["/cases"], "may": [], "type": "table", "fields_include": ["subject", "status"]},
+  {"prompt": "avg handle time", "vague": true, "must": ["/queue/avgWaitSeconds"], "may": []},
+  {"prompt": "show me the weather forcast", "vague": true, "must": ["/queue/open"], "may": []}
+]

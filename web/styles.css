@@ -86,7 +86,7 @@ code, pre { font-family: var(--mono); font-size: 12.5px; }
 .prompt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: end; }
 .prompt-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .prompt-controls .select { width: 230px; }
-.status { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; min-height: 20px; margin-top: 8px; }
+.status { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; color: var(--text-2); font-size: 13px; min-height: 20px; margin-top: 8px; }
 .spinner { width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; flex: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }

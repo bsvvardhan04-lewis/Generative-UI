@@ -85,7 +85,7 @@ def list_models(base_url: str) -> dict:
         return {"reachable": False, "url": base_url, "version": None, "models": [], "error": str(getattr(e, "reason", e))}
 
 
-NOT_DATASETS = {"eval_cases", "heldout_cases", "heldout2_cases", "aliases"}  # configuration and test files that live in data/
+NOT_DATASETS = {"eval_cases", "heldout_cases", "heldout2_cases", "paraphrase_cases", "aliases"}  # configuration and test files that live in data/
 
 
 def list_datasets() -> list[dict]:
@@ -160,6 +160,7 @@ def run_payload(res, backend, data) -> dict:
         "dsl": res.dsl,
         "renders": renders,
         "attempts": res.attempts,
+        "rewrite": res.rewrite,
         "cacheHit": any(a.get("cached") for a in res.attempts),
         "source": "cache" if any(a.get("cached") for a in res.attempts) else "fast_path" if any(a.get("fast_path") for a in res.attempts) else "model",
         "fallback": res.fallback,

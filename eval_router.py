@@ -16,6 +16,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from cui.catalog import build_catalog
+from cui.rewrite import rewrite
 from cui.router import route
 from eval import score
 
@@ -26,12 +27,15 @@ def load(name):
     return json.loads((HERE / "data" / name).read_text(encoding="utf-8"))
 
 
-def evaluate(cases, cat, aliases, verbose=True):
+def evaluate(cases, cat, aliases, verbose=True, use_rewrite=True):
     answered = correct = 0
     wrong, declined, seconds = [], [], 0.0
     for c in cases:
         t = time.perf_counter()
-        r = route(c["prompt"], cat, aliases)
+        if use_rewrite:  # production path: L0-L3 query rewrite (which applies the aliases), then the router
+            r = route(rewrite(c["prompt"], cat, aliases).text, cat)
+        else:
+            r = route(c["prompt"], cat, aliases)
         seconds += time.perf_counter() - t
         if r.plan is None:
             declined.append((c["prompt"], r.reason))
@@ -59,11 +63,18 @@ def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     cat = build_catalog(load("sample_api.json"))
     aliases = load("aliases.json")
-    for label, file in (("dev (12 cases used while building the router)", "eval_cases.json"), ("held-out (written before the router)", "heldout_cases.json")):
+    use_rewrite = "--no-rewrite" not in sys.argv
+    if not use_rewrite:
+        sys.argv.remove("--no-rewrite")
+    print("query rewrite:", "on (L0-L3)" if use_rewrite else "off (aliases only)")
+    for label, file in (("dev (12 cases used while building the router)", "eval_cases.json"),
+                        ("held-out (written before the router)", "heldout_cases.json"),
+                        ("held-out 2 (fresh wording)", "heldout2_cases.json"),
+                        ("paraphrase (typos, synonyms, contractions; written before query rewrite)", "paraphrase_cases.json")):
         if len(sys.argv) > 1 and sys.argv[1] not in file and sys.argv[1] != "all":
             continue
         print(label)
-        evaluate(load(file), cat, aliases)
+        evaluate(load(file), cat, aliases, use_rewrite=use_rewrite)
 
 
 if __name__ == "__main__":

@@ -10,5 +10,7 @@
   "service level breaches": "sla breaches",
   "sla violations": "sla breaches",
   "activity feed": "activity",
-  "events": "activity"
+  "events": "activity",
+  "escalations": "escalated cases",
+  "escalation": "escalated case"
 }

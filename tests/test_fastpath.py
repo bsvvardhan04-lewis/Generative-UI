@@ -107,6 +107,12 @@ class AliasTests(unittest.TestCase):
         self.assertEqual(plan_for("List all the tickets", ALIASES)[0]["source"], "/cases")
         self.assertEqual(plan_for("What is the customer satisfaction?", ALIASES), [{"type": "metric", "value": "/today/csat"}])
 
+    def test_escalations_alias_becomes_a_filter(self):
+        self.assertIsNone(plan_for("How many escalations are there?"))  # "escalations" alone does not match "Escalated"
+        node = plan_for("How many escalations are there?", ALIASES)[0]
+        self.assertEqual((node["source"], node["filter"]), ("/cases", {"field": "status", "equals": "Escalated"}))
+        self.assertEqual(plan_for("Show the latest escalation", ALIASES)[0]["filter"]["equals"], "Escalated")
+
     def test_longest_alias_wins_and_whole_words_only(self):
         out = apply_aliases("service level breaches", {"service level breaches": "sla breaches", "breaches": "x"})
         self.assertEqual(out.split(), ["sla", "breaches"])

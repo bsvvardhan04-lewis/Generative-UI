@@ -79,7 +79,9 @@ before the select-mode fixes; the router answers 4 of them), models pre-warmed:
 
 Select mode first picked catalog items by number (s1); small models mapped words to the wrong number, so s2 picks
 by path. Both remaining 8B misses: "How many escalations are there?" ("escalations" does not match the value
-"Escalated", so no filter is added) and "Customer satisfaction for the week across the team".
+"Escalated", so no filter is added) and "Customer satisfaction for the week across the team". After this
+measurement, an `escalations -> escalated cases` alias was added, so the router now answers the first one directly
+(correctly, in under a millisecond); the table above predates that alias.
 
 **Router + model on the 40 dev/held-out prompts** (`--set all`; 4 vague prompts excluded from "passed"):
 

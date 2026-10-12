@@ -76,7 +76,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(names[-1], "result")
         result = events[-1]["data"]
         self.assertFalse(result["fallback"])
-        self.assertEqual(set(result["renders"]), {"markdown", "card", "html"})
+        self.assertEqual(set(result["renders"]), {"markdown", "card", "html", "hxl"})
+        self.assertEqual(result["renders"]["hxl"]["definition"], "tile/widget")
         self.assertEqual(result["dsl"]["cui"], "cui/1.0")
         self.assertIn("catalogText", result)
 

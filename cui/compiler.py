@@ -33,11 +33,9 @@ ACRONYMS = {"csat": "CSAT", "sla": "SLA", "id": "ID", "url": "URL", "ttl": "TTL"
 
 
 def humanize(key: str) -> str:
-    key = key.split(".")[-1]
-    key = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", key).replace("_", " ")
-    words = [ACRONYMS.get(w.lower(), w) for w in key.split()]
-    text = " ".join(words)
-    return text[:1].upper() + text[1:]
+    """'avgWaitSeconds' -> 'Avg Wait Seconds'; a dotted field keeps its parent ('customer.name' -> 'Customer Name')."""
+    key = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", key).replace("_", " ").replace(".", " ")
+    return " ".join(ACRONYMS.get(w.lower(), w[:1].upper() + w[1:]) for w in key.split())
 
 
 # --- value formatting --------------------------------------------------------
@@ -178,8 +176,12 @@ def _compile_collection(n: dict, data, cat: Catalog) -> dict:
         missing = [it for it in items if get_field(it, key) is None]
         present.sort(key=lambda it: get_field(it, key), reverse=n.get("sort_dir", "asc") == "desc")
         items = present + missing
+    if n.get("sort_by"):
+        node["sort"] = {"field": n["sort_by"], "dir": n.get("sort_dir", "asc")}
     if n.get("limit"):
         items = items[: n["limit"]]
+        node["limit"] = n["limit"]
+    node["fields"] = list(n["fields"])  # item field paths, so renderers can bind to the source data
     node["total"] = total
     node["count"] = len(items)
 

@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, urlparse
 
 import eval as evaluation  # eval.py: gold-case scoring
 from cui import run
-from cui.adapters import RENDERERS
+from cui.adapters import RENDERERS, hxl
 from cui.compiler import DSL_VERSION
 from cui.llm import HeuristicBackend, OllamaBackend, OpenAICompatBackend
 from cui.catalog import build_catalog
@@ -148,11 +148,9 @@ def model_mode(body: dict) -> str:
     return mode
 
 
-def run_payload(res, backend) -> dict:
-    renders = {}
-    for name, render in RENDERERS.items():
-        out = render(res.dsl)
-        renders[name] = out
+def run_payload(res, backend, data) -> dict:
+    renders = {name: render(res.dsl) for name, render in RENDERERS.items()}
+    renders["hxl"] = hxl.render(res.dsl, data)  # HXL widget JSON, values bound to the API data as $data
     return {
         "prompt": res.prompt,
         "backend": backend.name,
@@ -329,7 +327,7 @@ class Handler(BaseHTTPRequestHandler):
                 mode = "plan"  # the keyword baseline writes plans, it cannot "pick"
             res = run(prompt, data, backend, retries, on_event=emit, cache=PLAN_CACHE, fast_path=use_fast,
                       aliases=load_aliases(), mode=mode)
-            emit("result", run_payload(res, backend))
+            emit("result", run_payload(res, backend, data))
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass  # client cancelled
         except Exception as e:  # noqa: BLE001 - surface any pipeline bug to the UI instead of a dead stream

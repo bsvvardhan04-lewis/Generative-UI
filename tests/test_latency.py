@@ -45,7 +45,7 @@ class CompactSchemaTests(unittest.TestCase):
 
     def test_humanize_acronyms(self):
         self.assertEqual(humanize("avgWaitSeconds"), "Avg Wait Seconds")
-        self.assertEqual(humanize("customer.name"), "Name")
+        self.assertEqual(humanize("customer.name"), "Customer Name")
         self.assertEqual(humanize("resolutionRatePct"), "Resolution Rate %")
 
 

@@ -480,12 +480,12 @@ function drawRight() {
     return;
   }
   if (!r) {
-    bar.replaceChildren(barText('Canonical UI tree'));
-    body.replaceChildren(placeholder(S.running ? 'Working…' : 'Run a prompt to see the generated UI JSON.'));
+    bar.replaceChildren(barText('HXL widget JSON'));
+    body.replaceChildren(placeholder(S.running ? 'Working…' : 'Run a prompt to see the generated HXL widget JSON.'));
     return;
   }
-  const text = JSON.stringify(r.dsl, null, 2);
-  bar.replaceChildren(barText(`Canonical UI tree · ${r.dslVersion}`), copyBtn('Copy result JSON', () => text));
+  const text = JSON.stringify(r.renders.hxl, null, 2);
+  bar.replaceChildren(barText('HXL widget JSON · tile/widget, data bound as $data'), copyBtn('Copy HXL widget JSON', () => text));
   body.replaceChildren(codeView(text));
 }
 

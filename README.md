@@ -13,7 +13,7 @@ prompt + API JSON
   -> llm.py        local model (Ollama / llama.cpp / vLLM), output constrained by a per-request JSON Schema
   -> validate.py   semantic checks; errors go back to the model for repair (default 2 retries, max 3)
   -> compiler.py   deterministic: plan + data -> canonical DSL (cui/1.0), values copied from the API
-  -> adapters/     markdown | Adaptive Card (Teams) | html
+  -> adapters/     HXL widget JSON | markdown | Adaptive Card (Teams) | html
 ```
 
 The model only chooses what to show. It never writes values, so numbers cannot be hallucinated. Labels, units
@@ -31,8 +31,8 @@ One page, laid out like the HXL playground:
 * **Prompt** bar on top, with a model picker (installed Ollama models, or the keyword baseline) and **Generate**.
 * **Preview** (left): the result rendered as a card. Switch between **Teams** (Adaptive Card 1.5, drawn visually),
   **Web** (HTML) and **Chat** (Markdown). Each has a Copy button for its raw output.
-* **Structure** (right): the generated canonical UI JSON with line numbers. The **Data** tab holds the input API
-  response (editable; paste your own, or Reset to sample).
+* **Structure** (right): the generated **HXL widget JSON** (same format as the Salesforce HXL playground) with line
+  numbers and a Copy button. The **Data** tab holds the input API response (editable; paste your own, or Reset to sample).
 
 A status line shows what the pipeline is doing, then how the answer was produced and how long it took
 ("Answered by the fast path in 3 ms", "Seen before: served from the plan cache", or "Done in 3.4 s (model 3.3 s)").
@@ -100,7 +100,7 @@ datasets will differ; the router needs the same style of precise vocabulary the 
 ## Command line
 
 ```bash
-python -m unittest discover -s tests -t .          # 79 tests, no model needed
+python -m unittest discover -s tests -t .          # 88 tests, no model needed
 python run.py "show high priority cases" --render markdown          # keyword baseline, no LLM
 python run.py "show high priority cases" --backend ollama --model llama3.1:8b --render plan
 python run.py "show escalated cases as a table" --backend ollama --model llama3.1:8b --render card
@@ -138,7 +138,46 @@ Prompt v3 removed labels, intent and format from the model's output (the compile
 for the 3B model, about 25% faster. With 12-17 cases per set, a one-case difference is within noise.
 Dates for the earliest runs are approximate.
 
+## HXL widget output
+
+`cui/adapters/hxl.py` emits the format used by the HXL playground (checked against its component docs and
+tutorials): a `tile/widget` whose `dataProviders` holds the data the view needs as an `inline-data` provider named
+`$data`, and `children` built from `tile/container`, `tile/column`, `tile/row`, `tile/text`, `tile/badge` and
+`tile/table`, using only documented attributes and values.
+
+```json
+{
+  "definition": "tile/widget",
+  "dataProviders": [
+    { "definition": "inline-data", "expressionKey": "$data", "inline": true,
+      "value": { "queue": { "open": 18 }, "cases": [ { "id": "C-10482", "subject": "...", "status": "Escalated" } ] } }
+  ],
+  "children": [
+    { "definition": "tile/container", "children": [
+      { "definition": "tile/column", "attributes": { "gap": "lg" }, "children": [
+        { "definition": "tile/text", "attributes": { "text": "{!$data.queue.open}", "variant": "h2" } },
+        { "definition": "tile/container",
+          "meta": { "forEach": "{!$data.cases}", "forItem": "$item", "if": "{!$item.status = 'Escalated'}" },
+          "children": [ { "definition": "tile/text", "attributes": { "text": "{!$item.subject}" } } ] }
+      ] }
+    ] }
+  ]
+}
+```
+
+* Values are **bound** with `{!$data.path}` expressions where HXL can compute the view itself: single values, and
+  lists whose only operation is a filter (`meta.forEach` + `meta.if`).
+* Sorted or limited lists, and all tables (`tile/table` with `caption`, `columns`, `rows`, `sort`), are written with
+  **literal values**, because HXL expressions have no sort or slice.
+* `dataProviders` holds only what the view uses (referenced values; lists reduced to the shown, filtered and sorted
+  fields), so the output stays minimal.
+* Data that itself contains `{!` is marked `ignoreExpressions`, and keys that are not plain identifiers fall back to
+  literal values.
+* Not verified inside a live Salesforce org; the format follows the playground's documentation and examples.
+
 ## Canonical DSL (cui/1.0)
+
+The internal, renderer-neutral tree that every adapter (HXL, Teams card, HTML, Markdown) is generated from.
 
 Semantic, platform-neutral. Containers: `stack`, `row` (consecutive metrics are grouped).
 Leaves: `metric`, `text`, `status` (with `tone`), `list`, `table`. Every value carries the

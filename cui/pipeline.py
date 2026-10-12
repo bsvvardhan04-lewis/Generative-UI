@@ -144,7 +144,7 @@ class PlanCache:
 
 
 def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: PlanCache | None = None,
-        fast_path: bool = False, aliases: dict[str, str] | None = None, mode: str = "plan") -> Result:
+        fast_path: bool = False, aliases: dict[str, str] | None = None, mode: str = "plan", semantic=None) -> Result:
     """Run the pipeline. `on_event(name, data)` is called as each stage starts/finishes (used by the web UI).
     mode="plan": the model writes the whole view plan. mode="select": the model only picks numbered catalog
     items and code adds filter/sort/limit/columns (far fewer generated tokens, see selector.py)."""
@@ -210,7 +210,24 @@ def run(prompt: str, data, backend, max_retries: int = 2, on_event=None, cache: 
             emit("fast_path", {"seconds": took})
         else:
             emit("fast_path_declined", {"reason": routed.reason, "seconds": took})
-    model_needed = cached is None and (routed is None or routed.plan is None)
+    matched = None
+    if cached is None and (routed is None or routed.plan is None) and semantic is not None:
+        # L4: match by meaning with a small embedding model; answers only on a strong, unambiguous match
+        t = time.perf_counter()
+        try:
+            matched = semantic.match(query, cat)
+        except RuntimeError as e:  # embedding model missing or Ollama down: just skip this level
+            emit("semantic_unavailable", {"message": str(e)})
+        else:
+            took = round(time.perf_counter() - t, 4)
+            info = {"seconds": took, "score": matched.score, "margin": matched.margin, "best": matched.best, "reason": matched.reason}
+            if matched.plan is not None:
+                plan, errors = matched.plan, []
+                attempts.append({"semantic": True, "seconds": took, "errors": [], "score": matched.score, "best": matched.best})
+                emit("semantic", info)
+            else:
+                emit("semantic_declined", info)
+    model_needed = cached is None and (routed is None or routed.plan is None) and (matched is None or matched.plan is None)
     for attempt in range(1, (max_retries + 2) if model_needed else 1):
         emit("model_start", {"attempt": attempt, "max_attempts": max_retries + 1, "backend": getattr(backend, "name", "model")})
         t = time.perf_counter()

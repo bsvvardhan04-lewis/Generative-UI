@@ -22,15 +22,19 @@ import eval as evaluation  # eval.py: gold-case scoring
 from cui import run
 from cui.adapters import RENDERERS, hxl
 from cui.compiler import DSL_VERSION
-from cui.llm import HeuristicBackend, OllamaBackend, OpenAICompatBackend
+from cui.llm import HeuristicBackend, OllamaBackend, OpenAICompatBackend, prefer_ipv4
 from cui.catalog import build_catalog
 from cui.pipeline import PROMPT_VERSION, PlanCache, prefix_messages
+from cui.semantic import OllamaEmbedder, SemanticIndex
 
 HERE = Path(__file__).parent
 PLAN_CACHE = PlanCache(path=HERE / "cache" / "plans.json")
 # "select": the model picks catalog paths (~12 tokens) instead of writing a plan (32-65 tokens). On the fresh
 # held-out set (data/heldout2_cases.json) it matched or beat "plan" accuracy at ~40% lower median latency.
 DEFAULT_MODE = "select"
+# L4 semantic level (cui/semantic.py): off unless started with --semantic or a request sends "semantic": true.
+# Measured with all-minilm it is not reliable enough to answer on its own; see README "Semantic level".
+SEMANTIC_ON = False
 
 
 def load_aliases() -> dict[str, str]:
@@ -44,10 +48,11 @@ def load_aliases() -> dict[str, str]:
 WEB = HERE / "web"
 DATA = HERE / "data"
 RESULTS = HERE / "results"
-DEFAULT_OLLAMA = "http://localhost:11434"
+DEFAULT_OLLAMA = "http://127.0.0.1:11434"  # not "localhost": on Windows that costs ~2 s per request (IPv6 tried first)
 MAX_BODY = 2_000_000
 MAX_PROMPT = 500
 LOOPBACK = {"localhost", "127.0.0.1", "[::1]"}
+SEMANTIC = SemanticIndex(OllamaEmbedder(base_url=DEFAULT_OLLAMA))  # used only when the semantic level is on
 
 
 class ApiError(Exception):
@@ -64,7 +69,7 @@ def clean_base_url(url: str | None, default: str) -> str:
 
 
 def http_get_json(url: str, timeout: float = 2.5):
-    with urllib.request.urlopen(url, timeout=timeout) as r:
+    with urllib.request.urlopen(prefer_ipv4(url), timeout=timeout) as r:
         return json.load(r)
 
 
@@ -85,7 +90,7 @@ def list_models(base_url: str) -> dict:
         return {"reachable": False, "url": base_url, "version": None, "models": [], "error": str(getattr(e, "reason", e))}
 
 
-NOT_DATASETS = {"eval_cases", "heldout_cases", "heldout2_cases", "paraphrase_cases", "aliases"}  # configuration and test files that live in data/
+NOT_DATASETS = {"eval_cases", "heldout_cases", "heldout2_cases", "paraphrase_cases", "semantic_cases", "aliases"}  # configuration and test files that live in data/
 
 
 def list_datasets() -> list[dict]:
@@ -118,7 +123,7 @@ def make_backend(body: dict):
     if kind == "openai":
         if not model:
             raise ApiError(400, "Choose a model")
-        return OpenAICompatBackend(model, clean_base_url(body.get("baseUrl"), "http://localhost:8080/v1"))
+        return OpenAICompatBackend(model, clean_base_url(body.get("baseUrl"), "http://127.0.0.1:8080/v1"))
     raise ApiError(400, f"Unknown backend '{kind}'")
 
 
@@ -162,7 +167,8 @@ def run_payload(res, backend, data) -> dict:
         "attempts": res.attempts,
         "rewrite": res.rewrite,
         "cacheHit": any(a.get("cached") for a in res.attempts),
-        "source": "cache" if any(a.get("cached") for a in res.attempts) else "fast_path" if any(a.get("fast_path") for a in res.attempts) else "model",
+        "source": next((s for flag, s in (("cached", "cache"), ("fast_path", "fast_path"), ("semantic", "semantic"))
+                        if any(a.get(flag) for a in res.attempts)), "model"),
         "fallback": res.fallback,
         "errors": res.errors,
         "stages": res.stages,
@@ -324,10 +330,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             emit("start", {"backend": backend.name, "retries": retries})
             use_fast = body.get("fastPath", True) is not False and backend.name != "heuristic-baseline"
+            use_semantic = use_fast and body.get("semantic", SEMANTIC_ON) is True
             if backend.name == "heuristic-baseline":
                 mode = "plan"  # the keyword baseline writes plans, it cannot "pick"
             res = run(prompt, data, backend, retries, on_event=emit, cache=PLAN_CACHE, fast_path=use_fast,
-                      aliases=load_aliases(), mode=mode)
+                      aliases=load_aliases(), mode=mode, semantic=SEMANTIC if use_semantic else None)
             emit("result", run_payload(res, backend, data))
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass  # client cancelled
@@ -364,7 +371,10 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
-    port = ap.parse_args().port
+    ap.add_argument("--semantic", action="store_true", help="enable the L4 semantic level (needs: ollama pull all-minilm)")
+    args = ap.parse_args()
+    port = args.port
+    SEMANTIC_ON = args.semantic
     srv = make_server(port)
     print(f"UI Planner running at http://127.0.0.1:{port}  (Ctrl+C to stop)")
     try:

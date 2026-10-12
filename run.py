@@ -17,9 +17,9 @@ def make_backend(kind: str, model: str, base_url: str | None):
     if kind == "heuristic":
         return HeuristicBackend()
     if kind == "ollama":
-        return OllamaBackend(model, base_url or "http://localhost:11434")
+        return OllamaBackend(model, base_url or "http://127.0.0.1:11434")
     if kind == "openai":
-        return OpenAICompatBackend(model, base_url or "http://localhost:8080/v1")
+        return OpenAICompatBackend(model, base_url or "http://127.0.0.1:8080/v1")
     raise SystemExit(f"unknown backend {kind}")
 
 

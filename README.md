@@ -7,6 +7,7 @@ prompt + API JSON
   -> rewrite.py    query rewrite, level by level (~1 ms): L0 normalize, L1 spelling, L2 concepts, L3 aliases
   -> pipeline.py   plan cache: a prompt seen before skips everything below (about 5-20 ms)
   -> router.py     fast path: deterministic matcher, answers clear prompts without a model (about 1-10 ms)
+  -> semantic.py   L4 meaning match with a small embedding model (off by default, see "Semantic level")
   -> catalog.py    introspect payload into a compact catalog (pointers, types, enums)
   -> selector.py   select mode (default): the model only *picks* catalog paths, {"pick":["/team"]};
                    code adds filter / sort / limit / columns from the prompt's own words
@@ -54,7 +55,29 @@ cover as many requests as possible.
 | query rewrite | ~1 ms, always | nothing by itself; turns wording into the data's vocabulary so the levels below match |
 | plan cache | ~5-20 ms | anything asked before, in any wording that rewrites to the same words |
 | fast-path router | ~1-10 ms | clear requests: every word explained by the data |
-| model (select mode) | ~3-5 s on this laptop | everything else |
+| semantic match (L4, off by default) | ~20-50 ms | strong, unambiguous meaning matches; see below |
+| model (select mode) | ~1.4 s median with llama3.2:3b, ~3.1 s with llama3.1:8b on this laptop | everything else |
+
+**Connection fix (the largest single win):** on Windows, `localhost` resolves to the IPv6 address `::1` first,
+while Ollama listens on IPv4 only, so every model call waited about 2 s before falling back (measured: 2,070 ms
+through `localhost` vs 16-57 ms through `127.0.0.1` for the same request). All defaults now use `127.0.0.1`, and
+`cui/llm.py prefer_ipv4()` rewrites a user-supplied `localhost` URL. On the 17-prompt set below, select mode went
+from a 3.5 s to a 1.4 s median with llama3.2:3b (15/17 passed), and from 4.7 s to 3.1 s with llama3.1:8b (16/17);
+those runs also include the query rewrite and new aliases, which answer 6 of the 17 without the model.
+
+### Semantic level (L4, `cui/semantic.py`), off by default
+
+Each value and list is described in a sentence (its name, unit meaning, fields, enum values and generic synonyms),
+embedded once per data shape with a small local model (`ollama pull all-minilm`, 45 MB), and the request is matched
+by cosine similarity; it answers only on a strong match that is clearly ahead of the runner-up.
+
+Measured with all-minilm (`python eval_semantic.py`): it is **not reliable enough to answer on its own**.
+On the 28 calibration prompts the router declines, the only setting without a wrong answer (score >= 0.60,
+gap >= 0.03) answers 1 of them; a looser setting (0.45 / 0.06) answers 10 with 1 wrong, and on the fresh
+meaning-only set (`data/semantic_cases.json`, 18 prompts written before the module) it answered 2, 1 of them wrong.
+Correct matches scored 0.23-0.49, the same range as "tell me a joke". So the server keeps it off; turn it on with
+`python server.py --semantic` or `"semantic": true` per request, and re-run `eval_semantic.py` to calibrate a
+stronger embedding model before relying on it.
 
 ### Query rewrite (`cui/rewrite.py`)
 
@@ -140,7 +163,7 @@ datasets will differ; the router needs the same style of precise vocabulary the 
 ## Command line
 
 ```bash
-python -m unittest discover -s tests -t .          # 101 tests, no model needed
+python -m unittest discover -s tests -t .          # 111 tests, no model needed
 python run.py "show high priority cases" --render markdown          # keyword baseline, no LLM
 python run.py "show high priority cases" --backend ollama --model llama3.1:8b --render plan
 python run.py "show escalated cases as a table" --backend ollama --model llama3.1:8b --render card
@@ -148,9 +171,12 @@ python run.py "summarize my day" --backend ollama --model llama3.1:8b --render h
 python eval.py heuristic ollama:llama3.2:3b ollama:llama3.1:8b     # model only, plan mode, dev cases
 python eval.py --warm --set heldout2 fast+sel+ollama:llama3.1:8b   # production path: router + select mode
 python eval_router.py all [--no-rewrite]                           # router only: coverage and accuracy
+python eval_semantic.py                                            # calibrate / check the semantic level (needs all-minilm)
+python server.py --semantic                                        # web UI with the semantic level switched on
 ```
 
-`eval.py` spec flags: `fast+` puts the router (and aliases) in front, `sel+` uses select mode; `--set` is
+`eval.py` spec flags: `fast+` puts the router (and aliases) in front, `sel+` uses select mode, `sem+` adds the
+semantic level; `--set` is
 `dev`, `heldout`, `heldout2` or `all`; `--warm` pre-loads the model before timing. `run.py` uses plan mode.
 `--render` choices: `plan` (what the model produced), `dsl` (canonical output), `markdown`, `card`, `html`.
 `--backend openai --base-url http://localhost:8080/v1` targets llama.cpp `llama-server`, vLLM or LM Studio.

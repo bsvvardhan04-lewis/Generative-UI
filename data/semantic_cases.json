@@ -1,0 +1,20 @@
+[
+  {"prompt": "how quickly do I get back to people", "must": ["/today/firstResponseMinutes"], "may": []},
+  {"prompt": "how long are folks stuck in line on average", "must": ["/queue/avgWaitSeconds"], "may": []},
+  {"prompt": "how happy are the people I helped", "must": ["/today/csat"], "may": []},
+  {"prompt": "who works alongside me", "must": ["/team"], "may": []},
+  {"prompt": "what has happened lately", "must": ["/recentActivity"], "may": []},
+  {"prompt": "what share of my work got wrapped up", "must": ["/today/resolutionRatePct"], "may": []},
+  {"prompt": "what is my job title", "must": ["/agent/role"], "may": []},
+  {"prompt": "how do people reach me by mail", "must": ["/agent/email"], "may": []},
+  {"prompt": "things that broke our service promises", "must": ["/queue/slaBreaches"], "may": []},
+  {"prompt": "problems that came back after being fixed", "must": ["/today/reopened"], "may": []},
+  {"prompt": "how long has the person at the front of the line been waiting", "must": ["/queue/oldestWaitingMinutes"], "may": []},
+  {"prompt": "am I working right now", "must": ["/agent/status"], "may": []},
+  {"prompt": "everything customers have raised with us", "must": ["/cases"], "may": []},
+  {"prompt": "how much did I get done today", "must": ["/today/resolved"], "may": []},
+  {"prompt": "who is waiting for an answer from us right now", "must": ["/queue/open"], "may": ["/cases", "/queue/pending"]},
+  {"prompt": "tell me a joke", "vague": true, "must": ["/queue/open"], "may": []},
+  {"prompt": "what is the capital of France", "vague": true, "must": ["/queue/open"], "may": []},
+  {"prompt": "write me a poem about support", "vague": true, "must": ["/queue/open"], "may": []}
+]

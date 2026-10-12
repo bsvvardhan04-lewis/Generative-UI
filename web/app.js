@@ -430,6 +430,7 @@ async function run() {
     S.summary = !r ? ''
       : r.source === 'cache' ? `Seen before: served from the plan cache in ${fmtSecs(wall)}, no model used.`
         : r.source === 'fast_path' ? `Answered by the fast path in ${fmtSecs(wall)}, no model used.`
+        : r.source === 'semantic' ? `Matched by meaning in ${fmtSecs(wall)}, no model used.`
           : `Done in ${fmtSecs(wall)}${modelSecs ? ` (model ${fmtSecs(modelSecs)})` : ''}.`;
     const steps = (r && r.rewrite && r.rewrite.steps) || [];
     S.rewriteNote = steps.length

@@ -16,7 +16,14 @@ import urllib.request
 from .catalog import Catalog
 
 
+def prefer_ipv4(url: str) -> str:
+    """'localhost' -> '127.0.0.1'. On Windows, 'localhost' resolves to ::1 first; Ollama listens on IPv4 only, so
+    every request waited ~2 s for the IPv6 attempt to fail (measured: 2,070 ms vs 16-57 ms for the same call)."""
+    return re.sub(r"^(https?://)localhost(?=[:/]|$)", r"\g<1>127.0.0.1", url)
+
+
 def _post(url: str, body: dict, timeout: float) -> dict:
+    url = prefer_ipv4(url)
     req = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -32,7 +39,7 @@ class OllamaBackend:
     keep_alive keeps the weights in RAM between requests (the default is 5 minutes).
     num_predict caps a runaway generation (small models sometimes repeat nodes for minutes)."""
 
-    def __init__(self, model: str, base_url: str = "http://localhost:11434", num_ctx: int = 4096, timeout: float = 600,
+    def __init__(self, model: str, base_url: str = "http://127.0.0.1:11434", num_ctx: int = 4096, timeout: float = 600,
                  keep_alive: str = "30m", num_predict: int = 256):
         self.model, self.base_url, self.num_ctx, self.timeout = model, base_url.rstrip("/"), num_ctx, timeout
         self.keep_alive, self.num_predict = keep_alive, num_predict
@@ -79,7 +86,7 @@ class OllamaBackend:
 
 
 class OpenAICompatBackend:
-    def __init__(self, model: str, base_url: str = "http://localhost:8080/v1", api_key: str = "", timeout: float = 600):
+    def __init__(self, model: str, base_url: str = "http://127.0.0.1:8080/v1", api_key: str = "", timeout: float = 600):
         self.model, self.base_url, self.timeout = model, base_url.rstrip("/"), timeout
         self.name = f"openai-compat:{model}"
 

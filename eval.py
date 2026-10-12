@@ -15,6 +15,7 @@ from cui import run
 from cui.catalog import build_catalog
 from cui.pipeline import PROMPT_VERSION, prefix_messages
 from cui.selector import SELECT_VERSION
+from cui.semantic import OllamaEmbedder, SemanticIndex
 from run import make_backend
 
 HERE = Path(__file__).parent
@@ -110,6 +111,7 @@ def main() -> None:
     for spec in specs:
         *flags, base = spec.split("+")  # e.g. fast+sel+ollama:llama3.2:3b
         fast, mode = "fast" in flags, ("select" if "sel" in flags else "plan")
+        semantic = SemanticIndex(OllamaEmbedder()) if "sem" in flags else None  # sem+: L4 semantic level on
         kind, _, model = base.partition(":")
         backend = make_backend(kind, model or "llama3.2:3b", None)
         if warm and hasattr(backend, "warm"):
@@ -118,12 +120,14 @@ def main() -> None:
             print(f"  warm-up {spec}: {time.perf_counter() - t:.1f}s (not counted below)", flush=True)
         rows = []
         for c in cases:
-            res = run(c["prompt"], data, backend, fast_path=fast, aliases=aliases if (fast or mode == "select") else None, mode=mode)
+            res = run(c["prompt"], data, backend, fast_path=fast, aliases=aliases if (fast or mode == "select") else None,
+                      mode=mode, semantic=semantic)
             sc = score(c, res)
             sc["prompt"] = c["prompt"]
             sc["plan"] = res.plan
             sc["vague"] = bool(c.get("vague"))
-            sc["source"] = "fast_path" if any(a.get("fast_path") for a in res.attempts) else "model"
+            sc["source"] = next((s for flag, s in (("fast_path", "fast_path"), ("semantic", "semantic"))
+                                 if any(a.get(flag) for a in res.attempts)), "model")
             sc["errors"] = [a.get("errors") or a.get("error") for a in res.attempts]
             rows.append(sc)
             tag = "FAST" if sc["source"] == "fast_path" else "    "
@@ -133,8 +137,8 @@ def main() -> None:
         secs = [r["seconds"] for r in rows]
         summary.append({
             "spec": spec, "n": n, "passed": sum(r["pass"] for r in scored),
-            "fast": sum(r["source"] == "fast_path" for r in rows), "total": len(rows),
-            "fast_wrong": sum(r["source"] == "fast_path" and not r["pass"] for r in rows),
+            "fast": sum(r["source"] != "model" for r in rows), "total": len(rows),
+            "fast_wrong": sum(r["source"] != "model" and (not r["pass"] or r["vague"]) for r in rows),
             "p50": percentile(secs, 0.5), "p90": percentile(secs, 0.9), "max": max(secs), "mean": sum(secs) / len(secs),
         })
         version = SELECT_VERSION if mode == "select" else PROMPT_VERSION

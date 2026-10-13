@@ -33,7 +33,7 @@ PLAN_CACHE = PlanCache(path=HERE / "cache" / "plans.json")
 # held-out set (data/heldout2_cases.json) it matched or beat "plan" accuracy at ~40% lower median latency.
 DEFAULT_MODE = "select"
 # L4 semantic level (cui/semantic.py): off unless started with --semantic or a request sends "semantic": true.
-# Measured with all-minilm it is not reliable enough to answer on its own; see README "Semantic level".
+# With nomic-embed-text it is never wrong at the calibrated setting but answers few requests; see README "Semantic level".
 SEMANTIC_ON = False
 
 
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
-    ap.add_argument("--semantic", action="store_true", help="enable the L4 semantic level (needs: ollama pull all-minilm)")
+    ap.add_argument("--semantic", action="store_true", help="enable the L4 semantic level (needs: ollama pull nomic-embed-text)")
     args = ap.parse_args()
     port = args.port
     SEMANTIC_ON = args.semantic

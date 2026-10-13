@@ -55,7 +55,7 @@ cover as many requests as possible.
 | query rewrite | ~1 ms, always | nothing by itself; turns wording into the data's vocabulary so the levels below match |
 | plan cache | ~5-20 ms | anything asked before, in any wording that rewrites to the same words |
 | fast-path router | ~1-10 ms | clear requests: every word explained by the data |
-| semantic match (L4, off by default) | ~20-50 ms | strong, unambiguous meaning matches; see below |
+| semantic match (L4, off by default) | ~40-75 ms | strong, unambiguous meaning matches; see below |
 | model (select mode) | ~1.4 s median with llama3.2:3b, ~3.1 s with llama3.1:8b on this laptop | everything else |
 
 **Connection fix (the largest single win):** on Windows, `localhost` resolves to the IPv6 address `::1` first,
@@ -68,16 +68,27 @@ those runs also include the query rewrite and new aliases, which answer 6 of the
 ### Semantic level (L4, `cui/semantic.py`), off by default
 
 Each value and list is described in a sentence (its name, unit meaning, fields, enum values and generic synonyms),
-embedded once per data shape with a small local model (`ollama pull all-minilm`, 45 MB), and the request is matched
-by cosine similarity; it answers only on a strong match that is clearly ahead of the runner-up.
+embedded once per data shape with a local embedding model (`ollama pull nomic-embed-text`, 274 MB; the
+`search_query:` / `search_document:` prefixes it was trained with are added automatically), and the request is
+matched by cosine similarity; it answers only on a strong match that is clearly ahead of the runner-up.
 
-Measured with all-minilm (`python eval_semantic.py`): it is **not reliable enough to answer on its own**.
-On the 28 calibration prompts the router declines, the only setting without a wrong answer (score >= 0.60,
-gap >= 0.03) answers 1 of them; a looser setting (0.45 / 0.06) answers 10 with 1 wrong, and on the fresh
-meaning-only set (`data/semantic_cases.json`, 18 prompts written before the module) it answered 2, 1 of them wrong.
-Correct matches scored 0.23-0.49, the same range as "tell me a joke". So the server keeps it off; turn it on with
-`python server.py --semantic` or `"semantic": true` per request, and re-run `eval_semantic.py` to calibrate a
-stronger embedding model before relying on it.
+Measured with `python eval_semantic.py --model <name>`: calibrated on the 28 prompts the router declines in the
+dev / held-out / paraphrase sets, then checked on a fresh meaning-only set (`data/semantic_cases.json`, 18 prompts
+written before the module and never used for calibration).
+
+| embedding model | setting (score / gap) | calibration: answered, wrong | fresh set: answered, wrong | per request |
+|---|---|---|---|---|
+| all-minilm (45 MB) | 0.60 / 0.03 | 1 of 28, 0 | 0 of 18, 0 | ~15-60 ms |
+| all-minilm | 0.45 / 0.06 | 10 of 28, 1 | 2 of 18, 1 | |
+| **nomic-embed-text** (default) | **0.55 / 0.10** | 4 of 28, 0 | 1 of 18, 0 | ~40-75 ms |
+| nomic-embed-text | 0.60 / 0.03 | 13 of 28, 2 | 2 of 18, 0 | |
+
+all-minilm scores correct matches (0.23-0.49) in the same range as "tell me a joke", so it cannot be trusted.
+nomic-embed-text keeps unrelated requests below 0.50 and correct ones up to 0.74, but neighbouring options often
+tie (average vs. oldest wait, resolved vs. reopened), so a safe setting needs a 0.10 gap and then answers few
+requests. It is never wrong there, but it saves the model call on only ~5-15% of declined requests while adding
+~50 ms to all of them, so the server keeps it off. Turn it on with `python server.py --semantic` or
+`"semantic": true` per request.
 
 ### Query rewrite (`cui/rewrite.py`)
 
@@ -171,7 +182,7 @@ python run.py "summarize my day" --backend ollama --model llama3.1:8b --render h
 python eval.py heuristic ollama:llama3.2:3b ollama:llama3.1:8b     # model only, plan mode, dev cases
 python eval.py --warm --set heldout2 fast+sel+ollama:llama3.1:8b   # production path: router + select mode
 python eval_router.py all [--no-rewrite]                           # router only: coverage and accuracy
-python eval_semantic.py                                            # calibrate / check the semantic level (needs all-minilm)
+python eval_semantic.py [--model all-minilm]                       # calibrate / check the semantic level (needs nomic-embed-text)
 python server.py --semantic                                        # web UI with the semantic level switched on
 ```
 

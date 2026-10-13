@@ -10,10 +10,10 @@ runner-up (gap >= margin); otherwise the request goes on to the language model. 
 answer skips the model, so the thresholds are set conservatively from calibration sets
 (eval_semantic.py) and the result is checked on a separate set written before this module.
 
-Measured result with all-minilm: not reliable enough to answer by itself (see DEFAULT_THRESHOLD), so it
-is off by default. The plumbing is here so a stronger embedding model can be calibrated and switched on.
+Measured result (see DEFAULT_THRESHOLD): with nomic-embed-text it is never wrong at the calibrated setting
+but answers few requests, so it is off by default; all-minilm was not reliable at all.
 
-Cost with all-minilm (45 MB) via Ollama on the CPU-only test laptop: about 15-60 ms per request
+Cost with nomic-embed-text (274 MB) via Ollama on the CPU-only test laptop: about 40-75 ms per request
 (one query embedding); the catalog embeddings are computed once per data shape and cached.
 """
 from __future__ import annotations
@@ -34,12 +34,15 @@ TYPE_WORDS = {"integer": "a number", "number": "a number", "datetime": "a date a
               "boolean": "yes or no", "email": "an email address", "url": "a web link", "string": "a text value"}
 
 # Calibrated on the dev / held-out / held-out 2 / paraphrase sets (see eval_semantic.py); not on semantic_cases.json.
-# With all-minilm, 0.60 / 0.03 is the only setting with no wrong answer on those sets, and it answers almost nothing.
-# Lower settings answer more but wrongly (0.45 / 0.06: 10 answered, 1 wrong; on the fresh set 2 answered, 1 wrong).
-# That is why the server keeps this level off unless asked (server.py --semantic). Re-run eval_semantic.py before
-# trusting a different embedding model.
-DEFAULT_THRESHOLD = 0.60
-DEFAULT_MARGIN = 0.03
+# all-minilm: correct and unrelated requests score alike; the only no-wrong setting (0.60 / 0.03) answers 1 of 28,
+#   and looser settings are wrong on the fresh set (0.45 / 0.06: 2 answered there, 1 wrong).
+# nomic-embed-text (used here): unrelated requests stay below 0.50, but close options often tie. With a 0.10 gap
+#   it is never wrong on either set (0.55 / 0.10: 4 of 28 answered in calibration, 1 of 18 on the fresh set).
+# Safe, but it answers too little to be worth ~50 ms on every request the router declines, so the server still
+# keeps this level off unless asked (server.py --semantic). Re-run eval_semantic.py before changing these.
+DEFAULT_EMBED_MODEL = "nomic-embed-text"
+DEFAULT_THRESHOLD = 0.55
+DEFAULT_MARGIN = 0.10
 
 
 def _related(words: list[str]) -> list[str]:
@@ -72,13 +75,20 @@ def describe(cat: Catalog, kind: str, ptr: str) -> str:
     return text + (f"; values such as {', '.join(values)}" if values else "")
 
 
+# Some embedding models are trained with a task prefix on each text and score poorly without it.
+PREFIXES = {"nomic-embed-text": {"query": "search_query: ", "document": "search_document: "}}
+
+
 class OllamaEmbedder:
-    def __init__(self, model: str = "all-minilm", base_url: str = "http://127.0.0.1:11434", timeout: float = 30):
+    def __init__(self, model: str = DEFAULT_EMBED_MODEL, base_url: str = "http://127.0.0.1:11434", timeout: float = 30):
         self.model, self.base_url, self.timeout = model, base_url.rstrip("/"), timeout
         self.name = f"ollama:{model}"
+        self.prefixes = PREFIXES.get(model.split(":")[0], {})
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        r = _post(f"{self.base_url}/api/embed", {"model": self.model, "input": texts, "keep_alive": "30m"}, self.timeout)
+    def embed(self, texts: list[str], kind: str = "query") -> list[list[float]]:
+        pre = self.prefixes.get(kind, "")
+        r = _post(f"{self.base_url}/api/embed", {"model": self.model, "input": [pre + t for t in texts], "keep_alive": "30m"},
+                  self.timeout)
         return [_unit(v) for v in r["embeddings"]]
 
 
@@ -116,7 +126,7 @@ class SemanticIndex:
             if key in self._cache:
                 return self._cache[key]
         opts = select_options(cat)
-        vecs = self.embedder.embed([describe(cat, k, p) for k, p in opts])
+        vecs = self.embedder.embed([describe(cat, k, p) for k, p in opts], kind="document")
         with self._lock:
             self._cache[key] = (opts, vecs)
         return opts, vecs

@@ -1,6 +1,6 @@
-"""Calibrate and measure the L4 semantic level (needs Ollama with the all-minilm model).
+"""Calibrate and measure the L4 semantic level (needs Ollama with the embedding model, default nomic-embed-text).
 
-python eval_semantic.py
+python eval_semantic.py [--model nomic-embed-text] [--threshold T --margin M]
 
 1. Calibration: on the prompts the router declines in the dev / held-out / held-out 2 / paraphrase sets,
    sweep (threshold, margin) and show coverage vs. wrong answers.
@@ -10,6 +10,7 @@ A semantic answer counts as wrong if it fails the strict scorer, or if the promp
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -20,7 +21,7 @@ from cui.catalog import build_catalog
 from cui.rewrite import rewrite
 from cui.router import route
 from cui.selector import picks_to_plan, select_options
-from cui.semantic import DEFAULT_MARGIN, DEFAULT_THRESHOLD, OllamaEmbedder, SemanticIndex
+from cui.semantic import DEFAULT_EMBED_MODEL, DEFAULT_MARGIN, DEFAULT_THRESHOLD, OllamaEmbedder, SemanticIndex
 from eval import score
 
 HERE = Path(__file__).parent
@@ -39,9 +40,15 @@ def correct(case, plan) -> bool:
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default=DEFAULT_EMBED_MODEL)
+    ap.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
+    ap.add_argument("--margin", type=float, default=DEFAULT_MARGIN)
+    args = ap.parse_args()
     cat = build_catalog(load("sample_api.json"))
     aliases = load("aliases.json")
-    index = SemanticIndex(OllamaEmbedder())
+    index = SemanticIndex(OllamaEmbedder(args.model), args.threshold, args.margin)
+    print(f"embedding model: {args.model}")
     opts = select_options(cat)
     index.warm(cat)
 
@@ -65,7 +72,7 @@ def main() -> None:
             ans = [r for r in rows if r[0] >= t and r[1] >= m]
             print(f"  {t:9.2f} {m:7.2f} {len(ans):9d} {sum(not r[2] for r in ans):6d}")
 
-    print(f"\ncheck on semantic_cases.json (never used for calibration), threshold {DEFAULT_THRESHOLD}, margin {DEFAULT_MARGIN}:")
+    print(f"\ncheck on semantic_cases.json (never used for calibration), threshold {args.threshold}, margin {args.margin}:")
     stats = {"router": 0, "semantic": 0, "semantic_wrong": 0, "model": 0}
     for c in load("semantic_cases.json"):
         q = rewrite(c["prompt"], cat, aliases).text

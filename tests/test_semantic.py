@@ -4,10 +4,11 @@ import math
 import re
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from cui import run
 from cui.catalog import build_catalog
-from cui.semantic import SemanticIndex, describe
+from cui.semantic import OllamaEmbedder, SemanticIndex, describe
 
 ROOT = Path(__file__).parent.parent
 DATA = json.loads((ROOT / "data" / "sample_api.json").read_text(encoding="utf-8"))
@@ -28,7 +29,7 @@ class FakeEmbedder:
     def __init__(self):
         self.calls = []
 
-    def embed(self, texts):
+    def embed(self, texts, kind="query"):
         self.calls.append(len(texts))
         out = []
         for t in texts:
@@ -45,7 +46,7 @@ class FakeEmbedder:
 class Broken:
     name = "broken"
 
-    def embed(self, texts):
+    def embed(self, texts, kind="query"):
         raise RuntimeError("cannot reach http://127.0.0.1:11434/api/embed")
 
 
@@ -105,6 +106,26 @@ class MatchTests(unittest.TestCase):
         self.index.match("job title", build_catalog(refreshed))
         self.assertEqual(self.embedder.calls[0], len(CAT.scalars) + len(CAT.collections))
         self.assertEqual(self.embedder.calls[1:], [1, 1, 1])  # afterwards only the query is embedded
+
+
+class PrefixTests(unittest.TestCase):
+    def _sent(self, model, kind):
+        sent = []
+
+        def fake_post(url, body, timeout):
+            sent.extend(body["input"])
+            return {"embeddings": [[1.0, 0.0] for _ in body["input"]]}
+
+        with mock.patch("cui.semantic._post", fake_post):
+            OllamaEmbedder(model).embed(["open cases"], kind=kind)
+        return sent
+
+    def test_nomic_gets_task_prefixes(self):
+        self.assertEqual(self._sent("nomic-embed-text", "query"), ["search_query: open cases"])
+        self.assertEqual(self._sent("nomic-embed-text:latest", "document"), ["search_document: open cases"])
+
+    def test_other_models_get_plain_text(self):
+        self.assertEqual(self._sent("all-minilm", "document"), ["open cases"])
 
 
 class PipelineTests(unittest.TestCase):
